@@ -1,0 +1,149 @@
+{
+  "meta": {
+    "generatedAt": "2026-10-04T08:24:50.484366+00:00",
+    "source": "mock",
+    "count": 4,
+    "schemaVersion": 1,
+    "filterCounts": {
+      "ulsan_city": 1,
+      "ulsan_districts": 1,
+      "ulsan_education": 1,
+      "nationwide": 1
+    }
+  },
+  "notices": [
+    {
+      "id": "20261004002-00",
+      "noticeNo": "20261004002",
+      "noticeOrder": "00",
+      "category": "services",
+      "title": "울산 문화관광 홍보행사 기획 및 운영",
+      "noticeInstitution": "울산광역시 남구",
+      "demandInstitution": "울산광역시 남구",
+      "publishedAt": "2026-10-04 10:30:00",
+      "closedAt": "2026-10-12 16:00:00",
+      "estimatedPrice": "120000000",
+      "detailUrl": "https://www.g2b.go.kr/",
+      "region": null,
+      "raw": {
+        "bidNtceNo": "20261004002",
+        "bidNtceOrd": "00",
+        "bidNtceNm": "울산 문화관광 홍보행사 기획 및 운영",
+        "ntceInsttNm": "울산광역시 남구",
+        "dminsttNm": "울산광역시 남구",
+        "bidNtceDt": "2026-10-04 10:30:00",
+        "bidClseDt": "2026-10-12 16:00:00",
+        "presmptPrce": "120000000",
+        "bidNtceDtlUrl": "https://www.g2b.go.kr/"
+      },
+      "matches": {
+        "groupIds": [
+          "ulsan_districts"
+        ],
+        "labels": [
+          "울산 5개 구·군"
+        ]
+      }
+    },
+    {
+      "id": "20261004001-00",
+      "noticeNo": "20261004001",
+      "noticeOrder": "00",
+      "category": "services",
+      "title": "2026 울산 청년 창업 교육 프로그램 운영 용역",
+      "noticeInstitution": "울산광역시",
+      "demandInstitution": "울산광역시",
+      "publishedAt": "2026-10-04 09:00:00",
+      "closedAt": "2026-10-14 17:00:00",
+      "estimatedPrice": "85000000",
+      "detailUrl": "https://www.g2b.go.kr/",
+      "region": null,
+      "raw": {
+        "bidNtceNo": "20261004001",
+        "bidNtceOrd": "00",
+        "bidNtceNm": "2026 울산 청년 창업 교육 프로그램 운영 용역",
+        "ntceInsttNm": "울산광역시",
+        "dminsttNm": "울산광역시",
+        "bidNtceDt": "2026-10-04 09:00:00",
+        "bidClseDt": "2026-10-14 17:00:00",
+        "presmptPrce": "85000000",
+        "bidNtceDtlUrl": "https://www.g2b.go.kr/"
+      },
+      "matches": {
+        "groupIds": [
+          "ulsan_city"
+        ],
+        "labels": [
+          "울산시"
+        ]
+      }
+    },
+    {
+      "id": "20261004003-00",
+      "noticeNo": "20261004003",
+      "noticeOrder": "00",
+      "category": "services",
+      "title": "진로체험 박람회 및 교육행사 운영 용역",
+      "noticeInstitution": "울산광역시교육청",
+      "demandInstitution": "울산광역시교육청",
+      "publishedAt": "2026-10-03 14:20:00",
+      "closedAt": "2026-10-16 10:00:00",
+      "estimatedPrice": "64000000",
+      "detailUrl": "https://www.g2b.go.kr/",
+      "region": null,
+      "raw": {
+        "bidNtceNo": "20261004003",
+        "bidNtceOrd": "00",
+        "bidNtceNm": "진로체험 박람회 및 교육행사 운영 용역",
+        "ntceInsttNm": "울산광역시교육청",
+        "dminsttNm": "울산광역시교육청",
+        "bidNtceDt": "2026-10-03 14:20:00",
+        "bidClseDt": "2026-10-16 10:00:00",
+        "presmptPrce": "64000000",
+        "bidNtceDtlUrl": "https://www.g2b.go.kr/"
+      },
+      "matches": {
+        "groupIds": [
+          "ulsan_education"
+        ],
+        "labels": [
+          "울산교육청"
+        ]
+      }
+    },
+    {
+      "id": "20261004004-00",
+      "noticeNo": "20261004004",
+      "noticeOrder": "00",
+      "category": "services",
+      "title": "전국 국제교류 포럼 행사대행 용역",
+      "noticeInstitution": "한국산업인력공단",
+      "demandInstitution": "한국산업인력공단",
+      "publishedAt": "2026-10-02 11:00:00",
+      "closedAt": "2026-10-20 18:00:00",
+      "estimatedPrice": "150000000",
+      "detailUrl": "https://www.g2b.go.kr/",
+      "region": "전국",
+      "raw": {
+        "bidNtceNo": "20261004004",
+        "bidNtceOrd": "00",
+        "bidNtceNm": "전국 국제교류 포럼 행사대행 용역",
+        "ntceInsttNm": "한국산업인력공단",
+        "dminsttNm": "한국산업인력공단",
+        "bidNtceDt": "2026-10-02 11:00:00",
+        "bidClseDt": "2026-10-20 18:00:00",
+        "presmptPrce": "150000000",
+        "prtcptPsblRgnNm": "전국",
+        "bidNtceDtlUrl": "https://www.g2b.go.kr/"
+      },
+      "matches": {
+        "groupIds": [
+          "nationwide"
+        ],
+        "labels": [
+          "전국"
+        ]
+      }
+    }
+  ]
+}
