@@ -2,7 +2,7 @@
   "api": {
     "base_url": "https://apis.data.go.kr/1230000/ad/BidPublicInfoService",
     "page_size": 100,
-    "lookback_hours": 36,
+    "lookback_hours": 720,
     "timeout_seconds": 30
   },
   "categories": {
