@@ -1,0 +1,68 @@
+{
+  "api": {
+    "base_url": "https://apis.data.go.kr/1230000/ad/BidPublicInfoService",
+    "page_size": 100,
+    "lookback_hours": 36,
+    "timeout_seconds": 30
+  },
+  "categories": {
+    "services": true,
+    "goods": false,
+    "construction": false
+  },
+  "filters": {
+    "keywords": [
+      "교육",
+      "행사",
+      "박람회",
+      "전시",
+      "국제교류",
+      "홍보",
+      "연수",
+      "포럼",
+      "관광",
+      "운영 용역",
+      "행사대행"
+    ],
+    "exclude_keywords": [],
+    "institution_groups": [
+      {
+        "id": "ulsan_city",
+        "label": "울산시",
+        "enabled": true,
+        "institution_names": ["울산광역시"]
+      },
+      {
+        "id": "ulsan_districts",
+        "label": "울산 5개 구·군",
+        "enabled": true,
+        "institution_names": [
+          "울산광역시 중구",
+          "울산광역시 남구",
+          "울산광역시 동구",
+          "울산광역시 북구",
+          "울산광역시 울주군"
+        ]
+      },
+      {
+        "id": "ulsan_education",
+        "label": "울산교육청",
+        "enabled": true,
+        "institution_names": ["울산광역시교육청"]
+      },
+      {
+        "id": "ulsan_schools",
+        "label": "울산 학교",
+        "enabled": false,
+        "institution_names": [],
+        "institution_contains": ["학교", "유치원"]
+      }
+    ],
+    "nationwide": {
+      "enabled": true,
+      "label": "전국",
+      "allowed_regions": ["전국", "지역제한없음", "제한없음", "울산광역시", "울산"],
+      "allow_unknown_region": false
+    }
+  }
+}
