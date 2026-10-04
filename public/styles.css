@@ -61,6 +61,13 @@ h2 { margin: 0; font-size: clamp(29px, 4vw, 42px); letter-spacing: -.055em; line
 .filters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 30px; }
 .filter {
   min-height: 72px; padding: 13px 16px;
+
+
+/* 오늘 신규 공고 표시 */
+.filters { grid-template-columns: repeat(6, 1fr); }
+.today-filter { border-color: #9dcfb8; background: #effaf5; }
+.today-filter.active { border-color: var(--safe); background: var(--safe); }
+.today-tag { color: #116143; background: #dff7ed; }
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   border: 1px solid var(--line); border-radius: 16px;
   color: #334958; background: white; cursor: pointer;
