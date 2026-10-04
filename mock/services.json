@@ -1,0 +1,55 @@
+{
+  "response": {
+    "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
+    "body": {
+      "totalCount": 4,
+      "items": [
+        {
+          "bidNtceNo": "20261004001",
+          "bidNtceOrd": "00",
+          "bidNtceNm": "2026 울산 청년 창업 교육 프로그램 운영 용역",
+          "ntceInsttNm": "울산광역시",
+          "dminsttNm": "울산광역시",
+          "bidNtceDt": "2026-10-04 09:00:00",
+          "bidClseDt": "2026-10-14 17:00:00",
+          "presmptPrce": "85000000",
+          "bidNtceDtlUrl": "https://www.g2b.go.kr/"
+        },
+        {
+          "bidNtceNo": "20261004002",
+          "bidNtceOrd": "00",
+          "bidNtceNm": "울산 문화관광 홍보행사 기획 및 운영",
+          "ntceInsttNm": "울산광역시 남구",
+          "dminsttNm": "울산광역시 남구",
+          "bidNtceDt": "2026-10-04 10:30:00",
+          "bidClseDt": "2026-10-12 16:00:00",
+          "presmptPrce": "120000000",
+          "bidNtceDtlUrl": "https://www.g2b.go.kr/"
+        },
+        {
+          "bidNtceNo": "20261004003",
+          "bidNtceOrd": "00",
+          "bidNtceNm": "진로체험 박람회 및 교육행사 운영 용역",
+          "ntceInsttNm": "울산광역시교육청",
+          "dminsttNm": "울산광역시교육청",
+          "bidNtceDt": "2026-10-03 14:20:00",
+          "bidClseDt": "2026-10-16 10:00:00",
+          "presmptPrce": "64000000",
+          "bidNtceDtlUrl": "https://www.g2b.go.kr/"
+        },
+        {
+          "bidNtceNo": "20261004004",
+          "bidNtceOrd": "00",
+          "bidNtceNm": "전국 국제교류 포럼 행사대행 용역",
+          "ntceInsttNm": "한국산업인력공단",
+          "dminsttNm": "한국산업인력공단",
+          "bidNtceDt": "2026-10-02 11:00:00",
+          "bidClseDt": "2026-10-20 18:00:00",
+          "presmptPrce": "150000000",
+          "prtcptPsblRgnNm": "전국",
+          "bidNtceDtlUrl": "https://www.g2b.go.kr/"
+        }
+      ]
+    }
+  }
+}
