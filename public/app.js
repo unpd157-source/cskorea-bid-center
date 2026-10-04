@@ -1,11 +1,21 @@
 const state = { notices: [], group: "all" };
 const labels = {
   all: "전체 공고",
+  today: "오늘 새로 등록된 공고",
   ulsan_city: "울산시 공고",
   ulsan_districts: "5개 구·군 공고",
   ulsan_education: "교육청 공고",
   nationwide: "전국 공고",
 };
+
+function isToday(value) {
+  const date = parseKoreanDate(value);
+  if (!date) return false;
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+  });
+  return formatter.format(date) === formatter.format(new Date());
+}
 
 function parseKoreanDate(value) {
   if (!value) return null;
@@ -46,11 +56,19 @@ function escapeHtml(value) {
 }
 
 function visibleNotices() {
-  return state.notices.filter(notice => {
-    const active = !dday(notice.closedAt).expired;
-    const groupMatch = state.group === "all" || notice.matches?.groupIds?.includes(state.group);
-    return active && groupMatch;
-  });
+  return state.notices
+    .filter(notice => {
+      const active = !dday(notice.closedAt).expired;
+      const groupMatch = state.group === "all"
+        || (state.group === "today" && isToday(notice.publishedAt))
+        || notice.matches?.groupIds?.includes(state.group);
+      return active && groupMatch;
+    })
+    .sort((a, b) => {
+      const aDate = parseKoreanDate(a.closedAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const bDate = parseKoreanDate(b.closedAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return aDate - bDate;
+    });
 }
 
 function render() {
@@ -62,8 +80,9 @@ function render() {
 
   list.innerHTML = notices.map(notice => {
     const due = dday(notice.closedAt);
-    const urgency = due.days <= 3 ? "urgent" : due.days <= 7 ? "soon" : "";
-    const tags = (notice.matches?.labels || []).map(label => `<span class="tag">${escapeHtml(label)}</span>`).join("");
+    const urgency = due.days <= 5 ? "urgent" : due.days <= 10 ? "soon" : "";
+    const todayTag = isToday(notice.publishedAt) ? '<span class="tag today-tag">오늘 등록</span>' : '';
+    const tags = todayTag + (notice.matches?.labels || []).map(label => `<span class="tag">${escapeHtml(label)}</span>`).join("");
     return `
       <article class="notice-card">
         <div class="dday ${urgency}" aria-label="마감 ${escapeHtml(due.value)}">
@@ -86,7 +105,9 @@ function render() {
 function updateCounts() {
   const active = state.notices.filter(notice => !dday(notice.closedAt).expired);
   document.querySelector("#count-all").textContent = active.length;
+  document.querySelector("#count-today").textContent = active.filter(notice => isToday(notice.publishedAt)).length;
   Object.keys(labels).filter(group => group !== "all").forEach(group => {
+    if (group === "today") return;
     const count = active.filter(notice => notice.matches?.groupIds?.includes(group)).length;
     document.querySelector(`#count-${group}`).textContent = count;
   });
