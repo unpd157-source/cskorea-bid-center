@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Collect and normalize KONEPS bid notices into a static JSON file.
 
-The collector deliberately does not apply institution or keyword filters.
-Those rules belong to the next implementation stage.
+Strict API validation, bounded retries and cumulative notice retention.
 """
 
 from __future__ import annotations
@@ -67,24 +66,35 @@ def normalize_item(item: dict[str, Any], category: str) -> dict[str, Any]:
 
 
 def extract_response(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], int]:
-    response = payload.get("response", payload)
-    header = response.get("header", {})
-    result_code = str(header.get("resultCode", "00"))
+    if not isinstance(payload, dict) or not isinstance(payload.get("response"), dict):
+        raise ValueError("Missing API response envelope")
+    response = payload["response"]
+    header = response.get("header")
+    if not isinstance(header, dict) or "resultCode" not in header:
+        raise ValueError("Missing API result code")
+    result_code = str(header["resultCode"])
     if result_code not in {"00", "0"}:
-        message = header.get("resultMsg", "Unknown API error")
-        raise RuntimeError(f"KONEPS API error {result_code}: {message}")
-
-    body = response.get("body") or {}
-    items_node = body.get("items") or []
-    if isinstance(items_node, dict):
-        items = items_node.get("item") or []
-    else:
-        items = items_node
+        raise RuntimeError(f"KONEPS API error {result_code}")
+    body = response.get("body")
+    if not isinstance(body, dict) or "totalCount" not in body or "items" not in body:
+        raise ValueError("Missing API result body")
+    total = int(body["totalCount"])
+    if total < 0:
+        raise ValueError("Invalid totalCount")
+    items = body["items"]
+    if isinstance(items, dict):
+        items = items.get("item", [])
+    if items in (None, ""):
+        items = []
     if isinstance(items, dict):
         items = [items]
-    if not isinstance(items, list):
-        items = []
-    return items, int(body.get("totalCount") or len(items))
+    if not isinstance(items, list) or any(not isinstance(i, dict) for i in items):
+        raise ValueError("Invalid API items")
+    if any(not i.get("bidNtceNo") or not i.get("bidNtceNm") for i in items):
+        raise ValueError("Missing required notice fields")
+    if total == 0 and items:
+        raise ValueError("Inconsistent API totalCount")
+    return items, total
 
 
 def request_page(
@@ -108,13 +118,26 @@ def request_page(
     }
     url = f"{base_url.rstrip('/')}/{operation}?{urllib.parse.urlencode(params)}"
     request = urllib.request.Request(url, headers={"User-Agent": "CS-KOREA-Bid-Center/1.0"})
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"HTTP {exc.code} from {operation}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error from {operation}: {exc.reason}") from exc
+    # Never log request URLs: they contain the service key.
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            extract_response(payload)
+            return payload
+        except urllib.error.HTTPError as exc:
+            if exc.code not in {408, 429, 500, 502, 503, 504}:
+                raise RuntimeError(f"HTTP {exc.code} from {operation}") from None
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
+            reason = "network timeout or connection failure"
+        except (ValueError, RuntimeError):
+            reason = "invalid API response or API rejection"
+        if attempt == 3:
+            raise RuntimeError(f"Collection failed from {operation}: {reason}") from None
+        print(f"Retry {attempt + 1}/3 for {operation}", flush=True)
+        time.sleep(2 ** (attempt + 1))
+    raise RuntimeError("Collection failed")
 
 
 def collect_live(config: dict[str, Any], service_key: str) -> Iterable[dict[str, Any]]:
@@ -136,8 +159,10 @@ def collect_live(config: dict[str, Any], service_key: str) -> Iterable[dict[str,
             items, total_count = extract_response(payload)
             for item in items:
                 yield normalize_item(item, category)
+            if not items and received < total_count:
+                raise ValueError("API returned an incomplete page sequence")
             received += len(items)
-            if not items or received >= total_count:
+            if received >= total_count:
                 break
             page_no += 1
             time.sleep(0.15)
@@ -207,7 +232,7 @@ def apply_filters(items: Iterable[dict[str, Any]], config: dict[str, Any]) -> tu
 
         if not group_ids and nationwide.get("enabled", False):
             region = str(item.get("region") or "").casefold()
-            region_ok = (
+            region_ok = nationwide.get("include_all_regions", False) or (
                 (region and any(value in region for value in allowed_regions))
                 or (not region and nationwide.get("allow_unknown_region", False))
             )
@@ -219,6 +244,7 @@ def apply_filters(items: Iterable[dict[str, Any]], config: dict[str, Any]) -> tu
         if group_ids:
             enriched = dict(item)
             enriched["matches"] = {"groupIds": group_ids, "labels": labels}
+            enriched["eligibility"] = "참가 자격·지역 제한 원문 확인 필요"
             matched.append(enriched)
 
     return matched, counts
@@ -229,36 +255,62 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=Path("config.json"))
     parser.add_argument("--output", type=Path, default=Path("public/data/bids.json"))
     parser.add_argument("--mock-dir", type=Path)
+    parser.add_argument("--previous", type=Path, default=Path("public/data/bids.json"))
+    parser.add_argument("--status", type=Path, default=Path("public/data/status.json"))
     args = parser.parse_args()
+    attempted = datetime.now(timezone.utc).isoformat()
+    try:
+        config = load_json(args.config)
+        previous = load_json(args.previous) if args.previous.exists() else {}
+        if args.mock_dir:
+            if args.output.resolve() == Path("public/data/bids.json").resolve():
+                raise ValueError("Mock output must use a separate --output path")
+            source = "mock"
+            raw_notices = deduplicate(collect_mock(args.mock_dir, config))
+            old_notices = []
+        else:
+            service_key = os.environ.get("G2B_SERVICE_KEY", "").strip()
+            if not service_key:
+                raise ValueError("G2B_SERVICE_KEY is required")
+            source = "KONEPS OpenAPI"
+            raw_notices = deduplicate(collect_live(config, service_key))
+            if not raw_notices:
+                raise ValueError("Empty API collection; retaining previous data")
+            old_notices = previous.get("notices", []) if previous.get("meta", {}).get("source") == source else []
+        # Merge BEFORE filtering, so changed rules also apply to retained notices.
+        # New records win over previous copies with the same ID.
+        merged = deduplicate([*old_notices, *raw_notices])
+        notices, filter_counts = apply_filters(merged, config)
+        now = datetime.now(timezone.utc).isoformat()
+        document = {"meta": {"generatedAt": now, "source": source,
+            "count": len(notices), "schemaVersion": 2, "filterCounts": filter_counts,
+            "fetchedCount": len(raw_notices), "retention": "cumulative",
+            "coverage": "Keyword-matched services; institution-name rules; eligibility unverified"},
+            "notices": notices}
+        if not args.mock_dir:
+            from scripts.validate_data import validate_document
+            validate_document(document)
+        atomic_json(args.output, document)
+        if not args.mock_dir:
+            atomic_json(args.status, {"state": "success", "attemptedAt": attempted,
+                "lastSuccessAt": now, "message": "공고 수집 완료", "count": len(notices)})
+        print(f"Wrote {len(notices)} notices to {args.output}", flush=True)
+        return 0
+    except Exception as exc:
+        if not args.mock_dir:
+            # Exception text or traceback can contain a service key; publish only a safe code.
+            atomic_json(args.status, {"state": "error", "attemptedAt": attempted,
+                "message": "나라장터 수집 실패. 마지막 성공 자료를 유지합니다.",
+                "errorType": type(exc).__name__})
+        print(f"Collection failed ({type(exc).__name__}); previous data retained", file=sys.stderr)
+        return 1
 
-    config = load_json(args.config)
-    if args.mock_dir:
-        source = "mock"
-        notices = deduplicate(collect_mock(args.mock_dir, config))
-    else:
-        service_key = os.environ.get("G2B_SERVICE_KEY", "").strip()
-        if not service_key:
-            print("G2B_SERVICE_KEY is required for live collection", file=sys.stderr)
-            return 2
-        source = "KONEPS OpenAPI"
-        notices = deduplicate(collect_live(config, service_key))
 
-    notices, filter_counts = apply_filters(notices, config)
-
-    document = {
-        "meta": {
-            "generatedAt": datetime.now(timezone.utc).isoformat(),
-            "source": source,
-            "count": len(notices),
-            "schemaVersion": 1,
-            "filterCounts": filter_counts,
-        },
-        "notices": notices,
-    }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Wrote {len(notices)} notices to {args.output}")
-    return 0
+def atomic_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(temporary, path)
 
 
 if __name__ == "__main__":
