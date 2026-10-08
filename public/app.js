@@ -1,14 +1,78 @@
-const state={notices:[],group:'all'};
-const labels={all:'전체 공고',today:'오늘 새로 등록된 공고',ulsan_all:'울산 전체기관 공고',ulsan_city:'울산시 공고',ulsan_districts:'5개 구·군 공고',ulsan_education:'교육청 공고',nationwide:'전국 공고',closed:'마감된 공고'};
-function parseKoreanDate(v){if(!v)return null;const n=String(v).replace(' ','T'),d=new Date(n.includes('+')||n.endsWith('Z')?n:n+'+09:00');return Number.isNaN(d.getTime())?null:d}
-function isToday(v){const d=parseKoreanDate(v);if(!d)return false;const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'});return f.format(d)===f.format(new Date())}
-function dday(v){const e=parseKoreanDate(v);if(!e)return{value:'-',days:999,expired:false};const ms=e-new Date();if(ms<0)return{value:'마감',days:-1,expired:true};const days=Math.ceil(ms/86400000);return{value:days===0?'오늘':'D-'+days,days,expired:false}}
-function formatDate(v,time=false){const d=parseKoreanDate(v);if(!d)return'미정';return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'long',day:'numeric',...(time?{hour:'2-digit',minute:'2-digit',hour12:false}:{})}).format(d)}
-function formatPrice(v){const n=Number(v);return Number.isFinite(n)&&n>0?n.toLocaleString('ko-KR')+'원':'금액 미정'}
-function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function visible(){return state.notices.filter(n=>{const active=!dday(n.closedAt).expired;if(state.group==='closed')return !active;return active&&(state.group==='all'||state.group==='today'&&isToday(n.publishedAt)||n.matches?.groupIds?.includes(state.group))}).sort((a,b)=>{const x=parseKoreanDate(a.closedAt)?.getTime()??Number.MAX_SAFE_INTEGER,y=parseKoreanDate(b.closedAt)?.getTime()??Number.MAX_SAFE_INTEGER;return state.group==='closed'?y-x:x-y})}
-function render(){const notices=visible(),list=document.querySelector('#noticeList');document.querySelector('#currentLabel').textContent=labels[state.group];document.querySelector('#visibleCount').textContent=notices.length;document.querySelector('#emptyState').hidden=notices.length!==0;document.querySelector('#emptyTitle').textContent=state.group==='closed'?'최근 마감된 공고가 없습니다':'현재 확인할 공고가 없습니다';document.querySelector('#emptyDescription').textContent=state.group==='closed'?'최근 30일 수집 범위 안의 마감 공고가 여기에 표시됩니다.':'다음 자동 수집 때 새 공고를 다시 확인합니다.';list.innerHTML=notices.map(n=>{const due=dday(n.closedAt),urgency=due.days<=5?'urgent':due.days<=10?'soon':'',today=isToday(n.publishedAt)?'<span class="tag today-tag">오늘 등록</span>':'',tags=today+(n.matches?.labels||[]).map(x=>'<span class="tag">'+esc(x)+'</span>').join('');return '<article class="notice-card '+(due.expired?'closed-card':'')+'"><div class="dday '+(due.expired?'closed':urgency)+'" aria-label="마감 '+esc(due.value)+'"><span>마감</span><strong>'+esc(due.value)+'</strong></div><div class="notice-main"><div class="meta">'+tags+'<span class="category">'+(n.category==='services'?'용역':esc(n.category))+'</span></div><h3>'+esc(n.title||'제목 없는 공고')+'</h3><div class="details"><span><strong>수요기관</strong> '+esc(n.demandInstitution||n.noticeInstitution||'미확인')+'</span><span><strong>마감</strong> '+formatDate(n.closedAt,true)+'</span><span><strong>추정금액</strong> '+formatPrice(n.estimatedPrice)+'</span></div></div><a class="view-link" href="'+esc(n.detailUrl||'https://www.g2b.go.kr/')+'" target="_blank" rel="noopener noreferrer">공고 보기</a></article>'}).join('')}
-function updateCounts(){const active=state.notices.filter(n=>!dday(n.closedAt).expired),closed=state.notices.filter(n=>dday(n.closedAt).expired);document.querySelector('#count-all').textContent=active.length;document.querySelector('#count-today').textContent=active.filter(n=>isToday(n.publishedAt)).length;document.querySelector('#count-closed').textContent=closed.length;Object.keys(labels).forEach(g=>{if(['all','today','closed'].includes(g))return;document.querySelector('#count-'+g).textContent=active.filter(n=>n.matches?.groupIds?.includes(g)).length})}
-function bindFilters(){document.querySelectorAll('.filter').forEach(b=>b.addEventListener('click',()=>{state.group=b.dataset.group;document.querySelectorAll('.filter').forEach(x=>{const s=x===b;x.classList.toggle('active',s);x.setAttribute('aria-pressed',String(s))});render()}))}
-async function load({rebind=true,manual=false}={}){document.querySelector('#todayText').textContent=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'short'}).format(new Date());if(rebind)bindFilters();const btn=document.querySelector('#refreshButton');if(manual){btn.disabled=true;btn.textContent='스캔 중...';document.querySelector('#syncText').textContent='최신 자료 확인 중'}try{const r=await fetch('data/bids.json?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();state.notices=Array.isArray(data.notices)?data.notices:[];const generated=data.meta?.generatedAt?new Date(data.meta.generatedAt):null;document.querySelector('#syncText').textContent=generated?'최근 수집 '+new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(generated):'수집 시간 미확인';const badge=document.querySelector('#sourceBadge'),mock=data.meta?.source==='mock';badge.textContent=mock?'모의 데이터':'나라장터 데이터';badge.classList.toggle('live',!mock);updateCounts();render();if(manual)btn.textContent='확인 완료'}catch(e){console.error(e);document.querySelector('#noticeList').hidden=true;document.querySelector('#errorState').hidden=false;document.querySelector('#sourceBadge').textContent='연결 오류';if(manual)btn.textContent='다시 시도'}finally{if(manual){btn.disabled=false;setTimeout(()=>btn.textContent='다시 스캔',1400)}}}
-document.querySelector('#refreshButton').addEventListener('click',()=>load({rebind:false,manual:true}));load();
+const state = { notices: [], board: 'active', group: 'all', query: '', period: 'all', sort: 'deadline' };
+const labels = { all: '전체기관', ulsan_all: '울산 전체기관', ulsan_city: '울산시', ulsan_districts: '5개 구·군', ulsan_education: '교육청', nationwide: '전국' };
+const $ = s => document.querySelector(s);
+const dateFormat = new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'});
+function parseDate(value) {
+  if (!value) return null;
+  let s=String(value).trim().replace(' ','T');
+  if (/^\d{4}-\d\d-\d\d$/.test(s)) s+='T00:00:00';
+  if (!/(Z|[+-]\d\d:\d\d)$/.test(s)) s+='+09:00';
+  const d=new Date(s); return Number.isNaN(+d)?null:d;
+}
+function due(value, now=new Date()) {
+  const end=parseDate(value); if(!end)return {text:'미정',days:Infinity,expired:false};
+  if(end<=now)return {text:'마감',days:-1,expired:true};
+  const days=Math.round((Date.parse(dateFormat.format(end))-Date.parse(dateFormat.format(now)))/86400000);
+  return {text:days===0?'D-DAY':`D-${days}`,days,expired:false};
+}
+function isToday(value){const d=parseDate(value);return d&&dateFormat.format(d)===dateFormat.format(new Date());}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function safeUrl(value){try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)?u.href:'https://www.g2b.go.kr/';}catch{return 'https://www.g2b.go.kr/';}}
+function dateText(value,time=false){const d=parseDate(value);if(!d)return '미정';return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',...(time?{hour:'2-digit',minute:'2-digit',hour12:false}:{})}).format(d);}
+function groupMatch(n,g){if(g==='all')return true;if(g==='ulsan_all')return n.matches?.groupIds?.some(x=>x.startsWith('ulsan_'))||/울산/.test(`${n.noticeInstitution||''} ${n.demandInstitution||''}`);return n.matches?.groupIds?.includes(g);}
+function filtered(){
+ return state.notices.filter(n=>{
+  const d=due(n.closedAt);
+  if(d.expired!==(state.board==='closed')||!groupMatch(n,state.group))return false;
+  if(state.query&&!`${n.title||''} ${n.demandInstitution||''} ${n.noticeInstitution||''}`.toLocaleLowerCase().includes(state.query.toLocaleLowerCase()))return false;
+  if(state.board==='active'){
+   if(state.period==='today'&&!isToday(n.publishedAt))return false;
+   if(state.period==='urgent'&&d.days>5)return false;
+   if(state.period==='soon'&&d.days>10)return false;
+  }
+  return true;
+ }).sort((a,b)=>{
+  if(state.sort==='newest')return (+parseDate(b.publishedAt)||0)-(+parseDate(a.publishedAt)||0);
+  const x=+(parseDate(a.closedAt))||Number.MAX_SAFE_INTEGER,y=+(parseDate(b.closedAt))||Number.MAX_SAFE_INTEGER;
+  return state.board==='closed'?y-x:x-y;
+ });
+}
+function render(){
+ const closed=state.board==='closed',rows=filtered();
+ $('#boardTitle').textContent=closed?'마감된 공고 조회':'입찰공고 조회';
+ $('#currentLabel').textContent=labels[state.group]+(closed?' · 마감':'');
+ $('#visibleCount').textContent=rows.length; $('#emptyState').hidden=rows.length>0;
+ $('#period').disabled=closed;
+ $('#boardNote').textContent=closed?'공고일 기준 최근 30일 수집 범위의 마감 공고입니다.':'마감된 공고는 ‘마감된 공고’ 게시판에서 확인할 수 있습니다.';
+ document.querySelectorAll('[data-group]').forEach(b=>{const active=b.dataset.group===state.group;b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);});
+ document.querySelectorAll('.main-nav [data-board]').forEach(b=>{const active=b.dataset.board===state.board;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',active);});
+ $('#noticeList').innerHTML=rows.map(n=>{
+  const d=due(n.closedAt),tone=d.expired?'closed':d.days<=5?'urgent':d.days<=10?'soon':'';
+  const url=esc(safeUrl(n.detailUrl)),amount=Number(n.estimatedPrice);
+  return `<tr><td><span class="badge ${tone}">${d.text}</span></td><td class="title-cell">${isToday(n.publishedAt)?'<span class="new-tag">오늘 신규</span>':''}<a href="${url}" target="_blank" rel="noopener noreferrer">${esc(n.title||'제목 없는 공고')}</a><span class="institution">${esc(n.demandInstitution||n.noticeInstitution||'기관 미확인')}</span></td><td class="price">${amount>0?amount.toLocaleString('ko-KR')+'원':'금액 미정'}</td><td class="date" data-label="공고일">${dateText(n.publishedAt)}</td><td class="date" data-label="마감일">${dateText(n.closedAt,true)}</td><td><a class="original" href="${url}" target="_blank" rel="noopener noreferrer" aria-label="${esc(n.title)} 원문 보기">원문 ↗</a></td></tr>`;
+ }).join('');
+ const active=state.notices.filter(n=>!due(n.closedAt).expired);
+ $('#stat-all').textContent=active.length;$('#stat-today').textContent=active.filter(n=>isToday(n.publishedAt)).length;
+ $('#stat-urgent').textContent=active.filter(n=>due(n.closedAt).days<=5).length;$('#stat-closed').textContent=state.notices.length-active.length;
+}
+async function load(){
+ const button=$('#refreshButton');button.disabled=true;button.textContent='↻ 확인 중';$('#errorState').hidden=true;
+ try{
+  const r=await fetch('data/bids.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(`HTTP ${r.status}`);
+  const data=await r.json();if(!Array.isArray(data.notices))throw Error('Invalid notices');state.notices=data.notices;
+  $('#syncText').textContent=data.meta?.generatedAt?'최근 수집 '+dateText(data.meta.generatedAt,true):'수집 시간 미확인';
+  $('#sourceBadge').textContent=data.meta?.source==='mock'?'모의 데이터':'나라장터 공개정보';render();
+ }catch(e){$('#errorState').hidden=false;$('#syncText').textContent='불러오기 실패 · 재시도 필요';$('#sourceBadge').textContent='연결 확인 필요';}
+ finally{button.disabled=false;button.textContent='↻ 다시 스캔';}
+}
+function moveBoard(){render();$('#boardTitle').scrollIntoView({behavior:'smooth',block:'start'});}
+document.querySelectorAll('[data-board]').forEach(b=>b.addEventListener('click',()=>{state.board=b.dataset.board;moveBoard();}));
+document.querySelectorAll('[data-quick]').forEach(b=>b.addEventListener('click',()=>{state.board='active';state.group='all';state.query='';$('#query').value='';state.period=b.dataset.quick;$('#period').value=state.period;moveBoard();}));
+document.querySelectorAll('[data-group]').forEach(b=>b.addEventListener('click',()=>{state.group=b.dataset.group;render();}));
+$('#searchForm').addEventListener('submit',e=>{e.preventDefault();state.query=$('#query').value.trim();render();});
+$('#period').addEventListener('change',e=>{state.period=e.target.value;render();});
+$('#sort').addEventListener('change',e=>{state.sort=e.target.value;render();});
+$('#resetButton').addEventListener('click',()=>{state.group='all';state.query='';state.period='all';state.sort='deadline';$('#query').value='';$('#period').value='all';$('#sort').value='deadline';render();});
+$('#refreshButton').addEventListener('click',load);
+function updateClock(){$('#todayText').textContent=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'short'}).format(new Date());}
+updateClock();load();setInterval(()=>{updateClock();render();},60000);
