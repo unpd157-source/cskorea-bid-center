@@ -1,5 +1,4 @@
 name: 나라장터 수집 및 배포
-
 on:
   push:
     branches: [main]
@@ -7,60 +6,50 @@ on:
     - cron: "10 9,16 * * 1-5"
       timezone: "Asia/Seoul"
   workflow_dispatch:
-
 permissions:
   contents: write
   pages: write
   id-token: write
-
 concurrency:
   group: github-pages
   cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
-      - name: 소스 가져오기
-        uses: actions/checkout@v6
-
-      - name: 파이썬 준비
-        if: github.event_name != 'push'
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-
+      - name: 코드 검사
+        run: |
+          python3 -m unittest discover -s tests -v
+          node --check public/app.js
       - name: 나라장터 공고 수집
+        id: collect
         if: github.event_name != 'push'
+        continue-on-error: true
         env:
           G2B_SERVICE_KEY: ${{ secrets.G2B_SERVICE_KEY }}
-        run: python3 -m collector.collect --output public/data/bids.next.json
-
-      - name: 새 데이터 검증 및 교체
-        if: github.event_name != 'push'
-        run: python3 scripts/validate_data.py public/data/bids.next.json public/data/bids.json
-
-      - name: 갱신 데이터 저장
+        run: python3 -m collector.collect --output public/data/bids.json --previous public/data/bids.json --status public/data/status.json
+      - name: 갱신 데이터 및 수집 상태 저장
         if: github.event_name != 'push'
         run: |
-          if git diff --quiet -- public/data/bids.json; then
-            echo "변경된 공고가 없습니다."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add public/data/bids.json
-            git commit -m "data: 나라장터 공고 자동 갱신 [skip ci]"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/bids.json public/data/status.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: 공고 및 수집 상태 갱신 [skip ci]"
+            git pull --rebase origin main
             git push
           fi
-
-      - name: GitHub Pages 준비
-        uses: actions/configure-pages@v5
-
-      - name: 정적 사이트 묶기
-        uses: actions/upload-pages-artifact@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: public
-
+    outputs:
+      collection_failed: ${{ steps.collect.outcome == 'failure' }}
   deploy:
     environment:
       name: github-pages
@@ -71,3 +60,8 @@ jobs:
       - name: GitHub Pages 배포
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: 수집 실패 기록
+        if: needs.build.outputs.collection_failed == 'true'
+        run: |
+          echo "::error::수집 실패 상태를 게시했습니다. 이전 공고 자료는 보존했습니다."
+          exit 1
