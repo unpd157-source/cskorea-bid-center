@@ -1,0 +1,1 @@
+{"state":"error","attemptedAt":"2026-10-08T05:51:55Z","lastSuccessAt":"2026-10-07T14:37:59.056505+00:00","message":"마지막 확인된 자동 수집이 시간 초과로 실패했습니다. 관리자 재수집이 필요합니다.","errorType":"TimeoutError"}
