@@ -13,8 +13,8 @@ class ValidateDataTests(unittest.TestCase):
             source = root / "next.json"
             destination = root / "bids.json"
             source.write_text(json.dumps({
-                "meta": {"source": "KONEPS OpenAPI", "count": 1},
-                "notices": [{"id": "A-00"}],
+                "meta": {"source": "KONEPS OpenAPI", "count": 1, "generatedAt": "2026-10-08T00:00:00+00:00"},
+                "notices": [{"id": "A-00", "noticeNo": "A", "title": "행사", "matches": {"groupIds": ["all"]}}],
             }), encoding="utf-8")
             old_argv = __import__("sys").argv
             try:

@@ -9,7 +9,7 @@ from collector.collect import apply_filters, deduplicate, extract_response, norm
 class CollectorTests(unittest.TestCase):
     def test_extracts_official_response_envelope(self):
         payload = {"response": {"header": {"resultCode": "00"}, "body": {
-            "totalCount": 1, "items": [{"bidNtceNo": "1"}]
+            "totalCount": 1, "items": [{"bidNtceNo": "1", "bidNtceNm": "행사"}]
         }}}
         items, total = extract_response(payload)
         self.assertEqual(total, 1)
