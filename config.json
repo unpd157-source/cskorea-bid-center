@@ -27,6 +27,13 @@
     "exclude_keywords": [],
     "institution_groups": [
       {
+        "id": "ulsan_all",
+        "label": "울산 전체기관",
+        "enabled": true,
+        "institution_names": [],
+        "institution_contains": ["울산"]
+      },
+      {
         "id": "ulsan_city",
         "label": "울산시",
         "enabled": true,
