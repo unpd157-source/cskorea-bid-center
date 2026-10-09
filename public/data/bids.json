@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-10-08T15:05:01.588486+00:00",
+    "generatedAt": "2026-10-09T06:12:35.093067+00:00",
     "source": "KONEPS OpenAPI",
     "count": 1733,
     "schemaVersion": 2,
@@ -11,7 +11,7 @@
       "ulsan_education": 3,
       "nationwide": 1703
     },
-    "fetchedCount": 11803,
+    "fetchedCount": 11493,
     "retention": "cumulative",
     "coverage": "Keyword-matched services; institution-name rules; eligibility unverified"
   },
