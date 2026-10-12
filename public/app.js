@@ -72,7 +72,7 @@ async function load(){
   } catch { message=message||'수집 상태를 확인할 수 없습니다. 표시된 최근 수집 시각을 확인하세요.'; }
   $('#errorState').textContent=message;$('#errorState').hidden=!message;
  }catch(e){$('#errorState').textContent='자료 연결 실패 — 표시된 자료는 이전에 불러온 내용입니다. 자료 새로고침으로 재시도하세요.';$('#errorState').hidden=false;$('#syncText').textContent='불러오기 실패 · 재시도 필요';$('#sourceBadge').textContent='연결 확인 필요';}
- finally{button.disabled=false;button.textContent='↻ 자료 새로고침';}
+ finally{button.disabled=false;button.textContent='↻ 화면 새로고침';}
 }
 function moveBoard(){render();$('#boardTitle').scrollIntoView({behavior:'smooth',block:'start'});}
 document.querySelectorAll('[data-board]').forEach(b=>b.addEventListener('click',()=>{state.board=b.dataset.board;moveBoard();}));
