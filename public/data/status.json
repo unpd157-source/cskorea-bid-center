@@ -1,6 +1,7 @@
 {
-  "state": "error",
-  "attemptedAt": "2026-10-30T14:00:17.731606+00:00",
-  "message": "나라장터 수집 실패. 마지막 성공 자료를 유지합니다.",
-  "errorType": "RuntimeError"
+  "state": "success",
+  "attemptedAt": "2026-11-02T05:50:06.998744+00:00",
+  "lastSuccessAt": "2026-11-02T06:21:20.262781+00:00",
+  "message": "공고 수집 완료",
+  "count": 3074
 }
