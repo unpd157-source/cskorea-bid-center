@@ -1,6 +1,6 @@
 {
   "state": "error",
-  "attemptedAt": "2026-11-10T15:31:39.533149+00:00",
+  "attemptedAt": "2026-11-11T05:57:22.515735+00:00",
   "message": "나라장터 수집 실패. 마지막 성공 자료를 유지합니다.",
   "errorType": "RuntimeError"
 }
